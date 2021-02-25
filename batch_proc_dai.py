@@ -1,8 +1,11 @@
-import subprocess
+import subprocess,auxfun
 import os,sys,shlex,shutil,video,gdalnumeric,numpy
 import glob
 import auxfun as axf
-
+import ratios_ls5_reduced
+import ratios_ls7_reduced
+import ratios_ls8_reduced
+import hyperspec_edge_detection as heda
 """
 
     ---------------------
@@ -50,6 +53,22 @@ def gunzip(path,pattern="tar"):
         subprocess.call(["tar","xvf",a,"-C",path+'/'+dn+"_srdata_"])
     return None
 
+def geoinfo(datahdr,targethdr):
+    hdd=axf.read_hdr(datahdr)
+    mf=hdd.map_info
+    crs=hdd.coordinate_system_string
+    mf="map info ={"+mf+"}\n"
+    crs="coordinate system string = {"+crs+"}\n"
+    L=[]
+    L.append(mf)
+    L.append(crs)
+    open(targethdr,'a').writelines(L)
+    return None
+
+def writefile(origfile,data,suffix):
+    axf.schreibeBSQsingle(numpy.nan_to_num(data),origfile+'_'+suffix)
+    geoinfo(origfile+'.hdr',origfile+'_'+suffix+'.hdr')
+    return None
 
 def atms(path,pattern="L1C",b="60"):
     fliste = psr(pattern, path)
@@ -256,4 +275,74 @@ def rewrite_headers(inputbildhdr):#read orginal header and read map info and crs
         if j[1]==inputbildhdr:
             continue
         open(j[1],'a').writelines(L)
+    return None
+#Bitte hier weiter batch ratio,batch ratio stacks
+
+def stack_analyzeS5_reduced(path):
+    p60="srenv_stack_file"
+    fliste60 = psrp(p60,path)
+    L=[]
+    namliste=[]
+    for i in enumerate(fliste60):
+        a = i[1]
+        if '.hdr' in a:
+            continue
+        ratios_ls5_reduced.ls7_georat_single(a)
+        ratios_ls5_reduced.ls7_vegrat1_single(a)
+    return None
+
+def stack_analyzeS7_reduced(path):
+    p60="srenv_stack_file"
+    fliste60 = psrp(p60,path)
+    L=[]
+    namliste=[]
+    for i in enumerate(fliste60):
+        a = i[1]
+        if '.hdr' in a:
+            continue
+        ratios_ls7_reduced.ls7_georat_single(a)
+        ratios_ls7_reduced.ls7_vegrat1_single(a)
+    return None
+
+def stack_analyzeS8_reduced(path):
+    p60="srenv_stack_file"
+    fliste60 = psrp(p60,path)
+    L=[]
+    namliste=[]
+    for i in enumerate(fliste60):
+        a = i[1]
+        if '.hdr' in a:
+            continue
+        ratios_ls8_reduced.ls8_georat_single(a)
+        ratios_ls8_reduced.ls8_vegrat1_single(a)
+    return None
+#Time slice Stacks for single Data Files
+#Can be used with LS5 File Structure maybe needs to be adapted to fit other sensors for correct data name
+def stack_analyze(path,ratiosuff):
+    p60=ratiosuff
+    fliste60 = psrp(p60,path)
+    L=[]
+    namliste=[]
+    dataliste = []
+    for i in enumerate(fliste60):
+        a = i[1]
+        if '.hdr' in a:
+            continue
+        namliste.append(a.split('/')[-1][17:24])#get just the data names
+        dataliste.append(a)
+    dt=str(namliste).replace("[","{").replace("]","}")
+    dt="band names="+dt+'\n'
+    b10 =path+"/_"+ratiosuff+"_stack.vrt"
+    pats = dataliste
+    subprocess.call(["gdalbuildvrt", "-r", "cubic", "-separate", b10] + dataliste)
+    subprocess.call(["gdal_translate", "-of", "ENVI", b10, path+"/_"+ratiosuff+"_stacked_file"])
+    open(path+"/_"+ratiosuff+"_stacked_file.hdr",'a').write(dt)
+    return None
+#Still experimental
+# Hypertemproal edge detection:
+def do_hypertemporal_edge(data):
+    cubo=gdalnumeric.LoadFile(data)
+    out=heda.heda_archstyle(cubo,'Hyperion',winsize=3)
+    out=numpy.asarray(out)
+    auxfun.schreibeBSQ(out,data+'_hteda')
     return None
