@@ -5,7 +5,8 @@ import auxfun as axf
 import ratios_ls5_reduced
 import ratios_ls7_reduced
 import ratios_ls8_reduced
-import hyperspec_edge_detection as heda
+import ratios_ls8_dai, ratios_ls7u5_dai,sent2_ratios_dai
+import heda
 """
 
     ---------------------
@@ -22,6 +23,18 @@ import hyperspec_edge_detection as heda
 """
 #for python gt 3.5
 #patternsearchrecursive
+def geoinfo(datahdr,targethdr):
+    hdd=axf.read_hdr(datahdr)
+    mf=hdd.map_info
+    crs=hdd.coordinate_system_string
+    mf="map info ={"+mf+"}\n"
+    crs="coordinate system string = {"+crs+"}\n"
+    L=[]
+    L.append(mf)
+    L.append(crs)
+    open(targethdr,'a').writelines(L)
+    return None
+
 def psr(pattern,my_path):
     files = glob.glob(my_path + '/**/*'+pattern+"*", recursive=True)
     return files
@@ -278,7 +291,7 @@ def rewrite_headers(inputbildhdr):#read orginal header and read map info and crs
     return None
 #Bitte hier weiter batch ratio,batch ratio stacks
 
-def stack_analyzeS5_reduced(path):
+def stack_analyzeS5_reduced(path,flag=1):
     p60="srenv_stack_file"
     fliste60 = psrp(p60,path)
     L=[]
@@ -287,11 +300,15 @@ def stack_analyzeS5_reduced(path):
         a = i[1]
         if '.hdr' in a:
             continue
-        ratios_ls5_reduced.ls7_georat_single(a)
-        ratios_ls5_reduced.ls7_vegrat1_single(a)
+        if flag==1:
+            ratios_ls5_reduced.ls7_georat_single(a)
+            ratios_ls5_reduced.ls7_vegrat1_single(a)
+        if flag==0:
+            ratios_ls7u5_dai.ls7_georat_single(a)
+            ratios_ls7u5_dai.ls7_vegrat1_single(a)
     return None
 
-def stack_analyzeS7_reduced(path):
+def stack_analyzeS7_reduced(path,flag=1):
     p60="srenv_stack_file"
     fliste60 = psrp(p60,path)
     L=[]
@@ -300,11 +317,15 @@ def stack_analyzeS7_reduced(path):
         a = i[1]
         if '.hdr' in a:
             continue
-        ratios_ls7_reduced.ls7_georat_single(a)
-        ratios_ls7_reduced.ls7_vegrat1_single(a)
+        if flag==1:
+            ratios_ls7_reduced.ls7_georat_single(a)
+            ratios_ls7_reduced.ls7_vegrat1_single(a)
+        if flag == 0:
+            ratios_ls7u5_dai.ls7_georat_single(a)
+            ratios_ls7u5_dai.ls7_vegrat1_single(a)
     return None
 
-def stack_analyzeS8_reduced(path):
+def stack_analyzeS8_reduced(path,flag=1):
     p60="srenv_stack_file"
     fliste60 = psrp(p60,path)
     L=[]
@@ -313,9 +334,15 @@ def stack_analyzeS8_reduced(path):
         a = i[1]
         if '.hdr' in a:
             continue
-        ratios_ls8_reduced.ls8_georat_single(a)
-        ratios_ls8_reduced.ls8_vegrat1_single(a)
+        if flag==1:
+            ratios_ls8_reduced.ls8_georat_single(a)
+            ratios_ls8_reduced.ls8_vegrat1_single(a)
+        if flag==0:
+            ratios_ls8_dai.ls8_georat_single(a)
+            ratios_ls8_dai.ls8_vegrat1_single(a)
     return None
+
+
 #Time slice Stacks for single Data Files
 #Can be used with LS5 File Structure maybe needs to be adapted to fit other sensors for correct data name
 def stack_analyze(path,ratiosuff):
@@ -340,9 +367,17 @@ def stack_analyze(path,ratiosuff):
     return None
 #Still experimental
 # Hypertemproal edge detection:
-def do_hypertemporal_edge(data):
+#gradient,abs_grad,absgradsmooth,cannyedge,gradsmooth
+def do_hypertemporal_edge(data,geoinfoflag=0):
     cubo=gdalnumeric.LoadFile(data)
     out=heda.heda_archstyle(cubo,'Hyperion',winsize=3)
     out=numpy.asarray(out)
     auxfun.schreibeBSQ(out,data+'_hteda')
+    nn="band names= {gradient,abs_grad,absgradsmooth,gradsmooth}"+'\n'
+    open(data+'_hteda.hdr','a').writelines(nn)
+    if geoinfoflag==0:
+        try:
+            geoinfo(data+'.hdr',data+'_hteda.hdr')
+        except(Exception):
+            print("no SRS string found")
     return None
