@@ -5,6 +5,7 @@ import auxfun as axf
 import ratios_ls5_reduced
 import ratios_ls7_reduced
 import ratios_ls8_reduced
+import sent2_ratios_reduced
 import ratios_ls8_dai, ratios_ls7u5_dai,sent2_ratios_dai
 import heda
 """
@@ -342,6 +343,38 @@ def stack_analyzeS8_reduced(path,flag=1):
             ratios_ls8_dai.ls8_vegrat1_single(a)
     return None
 
+def stack_analyzeSen2_reduced(path,flag=1,flagm=[20,10]):
+    if 20 in flagm:
+       p60="_20m_stack_file"
+       fliste60 = psrp(p60,path)
+       L=[]
+       namliste=[]
+       for i in enumerate(fliste60):
+           a = i[1]
+           if '.hdr' in a:
+               continue
+           if flag==1:
+               sent2_ratios_reduced.S2_20mgeorat_single(a)
+               sent2_ratios_reduced.S2_20m_vegrat1_single(a)
+           if flag==0:
+               sent2_ratios_dai.S2_20mgeorat_single(a)
+               sent2_ratios_dai.S2_20m_vegrat1_single(a)
+    if 10 in flagm:
+       p60="_10m_stack_file"
+       fliste60 = psrp(p60,path)
+       L=[]
+       namliste=[]
+       for i in enumerate(fliste60):
+           a = i[1]
+           if '.hdr' in a:
+               continue
+           if flag==1:
+               sent2_ratios_reduced.S2_10m_vegrat1_single(a)
+           if flag==0:
+               sent2_ratios_dai.S210m_georat_single(a)
+               sent2_ratios_dai.S2_10m_vegrat1_single(a)
+       return None
+
 
 #Time slice Stacks for single Data Files
 #Can be used with LS5 File Structure maybe needs to be adapted to fit other sensors for correct data name
@@ -355,7 +388,28 @@ def stack_analyze(path,ratiosuff):
         a = i[1]
         if '.hdr' in a:
             continue
-        namliste.append(a.split('/')[-1][17:24])#get just the data names
+        namliste.append(a.split('/')[-1][17:26])#get just the data names
+        dataliste.append(a)
+    dt=str(namliste).replace("[","{").replace("]","}")
+    dt="band names="+dt+'\n'
+    b10 =path+"/_"+ratiosuff+"_stack.vrt"
+    pats = dataliste
+    subprocess.call(["gdalbuildvrt", "-r", "cubic", "-separate", b10] + dataliste)
+    subprocess.call(["gdal_translate", "-of", "ENVI", b10, path+"/_"+ratiosuff+"_stacked_file"])
+    open(path+"/_"+ratiosuff+"_stacked_file.hdr",'a').write(dt)
+    return None
+#when using the ratiosuff please also supply the full resolution specifying string (e.g. 10m_stacked_file_ndvi_, instead of only _ndvi_)!
+def stack_analyzeSen2(path,ratiosuff):
+    p60=ratiosuff
+    fliste60 = psrp(p60,path)
+    L=[]
+    namliste=[]
+    dataliste = []
+    for i in enumerate(fliste60):
+        a = i[1]
+        if '.hdr' in a:
+            continue
+        namliste.append(a.split('/')[-1][19:35])#get just the data names
         dataliste.append(a)
     dt=str(namliste).replace("[","{").replace("]","}")
     dt="band names="+dt+'\n'
